@@ -19,18 +19,49 @@ output_path = os.path.abspath('ca-sim-model')
 # discrete states of cells
 class State(IntEnum):
     NO_FUEL = 1
-    NO_BURN = 2
+    NOT_BURNING = 2
     BURNING = 3
     BURNED = 4
 
 class Grid():
     
+    """Description
+    Parameters
+    ---------
+    self: Grid
+    the Grid to initialise
+
+    height: int
+    the height of the grid in cells
+
+    width: int
+    the width of the grid in cells
+
+    Functionality
+    ---------
+    it initialises the grid with given dimensions
+
+    """
     def __init__(self,height,width):
         self.height = height
         self.width = width
         self.grid = np.zeros((self.height,self.width), dtype=object)
 
-    # populate the Grid with fuel and no fuel cells
+    """Description
+    Parameters
+    ---------
+    self: Grid
+    the Grid to populate
+
+    p_nofuel: float
+    the probability of cells being unable to be burned => class NoFuel()
+    In the future this is set by the user based on real-life evidence, for now it is random.
+
+    Functionality
+    ---------
+    it populates the grid with cells that are either able or unable to be burned (class Nofuel() || Fuel() )
+
+    """
     def PopulateGrid(self,p_nofuel):
       # probability to have a cell with no fuel
       self.p_nofuel = p_nofuel
@@ -44,17 +75,36 @@ class Grid():
               else:
                 self.grid[i][j] = Fuel(np.random.choice([-0.3,0,0.4],1),np.random.choice([-0.4,0,0.3],1))
 
-    # visualise the Grid
+    """Description
+    Parameters
+    ---------
+    self: Grid
+    the Grid to print
+
+    iter_num: int
+    iteration number, useful for printing the time step on the plot 
+    and keeping the output file names unique
+
+    Functionality
+    ---------
+    it prints the grid using matplotlib's pyplot and colors libraries. 
+    The colormap is sliced depending on the number of unique states present on the grid at the time it is called.
+
+    """
     def ShowGrid(self,iter_num=0):
       grid_rep = np.zeros((self.height,self.width), dtype=int)
+      unique_states = set()
       for i in range(len(self.grid)):
           for j in range(len(self.grid[i])):
               grid_rep[i][j] = (self.grid[i][j].state.value)
+              unique_states.add(self.grid[i][j])
 
-      colormap = colors.ListedColormap(["grey","black","green","red",])
+      num_states = len(unique_states)
+      colormap = colors.ListedColormap(["grey","green","red","black"][:num_states])
+
       plt.figure(figsize=(10,10))
       plt.imshow(grid_rep,cmap=colormap)
-      plt.title('Grid Visualization (Time Step = {})'.format(i))
+      plt.title('Grid Visualization (Time Step = {})'.format(iter_num))
       plt.grid(False)
       plt.savefig('./output/{}.png'.format(10 + iter_num))
     
@@ -123,7 +173,7 @@ class Grid():
       for i in range(len(window)):
         for j in range(len(window[i])):
             if window[i][j] == 1:
-              if self.grid[x+i-1][y+j-1].state == State.NO_BURN:
+              if self.grid[x+i-1][y+j-1].state == State.NOT_BURNING:
                 p_burn = np.random.normal(0,1)
                 print("burning cell {},{} with probability {}".format(i,j,p_burn))
                 if p_burn > 0:
@@ -136,33 +186,33 @@ class Grid():
     self: Grid
     the Grid on which to perform the simulation
 
-    ignition_x: int
-    x coordinate of the ignition cell
-
-    ignition_y: int
-    y coordinate of the ignition cell
     Functionality
     ---------
     it changes the cell values of the input Grid (specifically the cell status) 
     based on the Cellular Automata Rules.
     """
         
-    def ca_simulation(self):
-      burn_count = 0
-
+    def ca_simulation(self, count):
+      burn_count = count
+      burning_cells = []
       # check neighbours
+      cells_to_check = []
       for x in range(len(self.grid)):
         for y in range(len(self.grid[x])):
-          if self.grid[x][y].state == State.BURNING:
-            self.check_neighbours(x,y)
+            cells_to_check.append((x, y))
+            np.random.shuffle(cells_to_check)
+      
+      for cell in cells_to_check:
+        x,y = cell
+        if self.grid[x][y].state == State.BURNING:
+          self.check_neighbours(x,y)
+          burning_cells.append((x,y))
       
       # enforce rule 2: if a cell is in state 3 - BURN, it will be BURNED down in the next time step
-      for i in range(len(self.grid)):
-        for j in range(len(self.grid[i])):
-          if self.grid[i][j].state == State.BURNING:
-            print("cell {},{} has burned down".format(i,j))
-            burn_count += 1
-            self.grid[i][j].state == State.BURNED
+      for cell in burning_cells:
+        x,y = cell
+        print("cell {},{} has burned down".format(x,y))
+        self.grid[x][y].state = State.BURNED
 
       self.ShowGrid(burn_count)
 
@@ -174,7 +224,7 @@ class Fuel():
   def __init__(self,pveg,pden):
       self.pveg = pveg
       self.pden = pden
-      self.state = State.NO_BURN
+      self.state = State.NOT_BURNING
     
   def setState(self,state):
      self.state = state
@@ -191,8 +241,10 @@ if __name__ == "__main__":
   height = 120
   width = 100
   grid = Grid(height,width)
+  count = 0
 
   grid.PopulateGrid(0.2)
   grid.ignite(35,46)
   for i in range(25):
-    grid.ca_simulation()
+    grid.ca_simulation(count)
+    count += 1
