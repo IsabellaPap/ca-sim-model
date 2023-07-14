@@ -6,6 +6,7 @@ Created: Wed 14 Jun, 2023
 
 # imports
 from enum import IntEnum
+from math import cos, exp, sqrt, tan
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -73,7 +74,7 @@ class Grid():
               if grid_rep[i][j] == 1:
                 self.grid[i][j] = noFuel()
               else:
-                self.grid[i][j] = Fuel(np.random.choice([-0.3,0,0.4],1),np.random.choice([-0.4,0,0.3],1))
+                self.grid[i][j] = Fuel(np.random.choice([-0.3,0,0.4],1),np.random.choice([-0.4,0,0.3],1),np.random.choice([1,2,6,7],1))
 
     """Description
     Parameters
@@ -174,7 +175,11 @@ class Grid():
         for j in range(len(window[i])):
             if window[i][j] == 1:
               if self.grid[x+i-1][y+j-1].state == State.NOT_BURNING:
-                p_burn = np.random.normal(0,1)
+                if x == x+i-1:
+                   position = 0
+                else:
+                   position = 1
+                p_burn = Grid.calculate_P_burn(self.grid[x][y],self.grid[x+i-1][y+j-1],9,np.random.choice([0,45,90,-45,-90,180,-180],1), position)
                 print("burning cell {},{} with probability {}".format(i,j,p_burn))
                 if p_burn > 0:
                   self.ignite(x+i-1,y+j-1)
@@ -212,22 +217,55 @@ class Grid():
       for cell in burning_cells:
         x,y = cell
         print("cell {},{} has burned down".format(x,y))
-        self.grid[x][y].state = State.BURNED
+        self.grid[x][y].setState(State.BURNED)
 
       self.ShowGrid(burn_count)
+
+    def calculate_P_burn(cell_from, cell_to, V, theta, position):
+      P_h = 0.58
+      p_veg, p_den = Fuel.getFuelAttributes(cell_to)
+
+      c1 = 0.045
+      c2 = 0.131
+      ft = exp(V*c2*(cos(theta)-1))
+      P_w = exp(c1*V)*ft
+
+      a = 0.078
+      # cell altitudes
+      E1 = Fuel.getAltitude(cell_from)
+      E2 = Fuel.getAltitude(cell_to)
+      l = 25
+      if position == 0:
+        theta_s = 1/(tan(E1-E2/l))
+      elif position == 1:
+         theta_s = 1/(tan(E1-E2/sqrt(2*l)))
+      P_s = exp(a*theta_s)
+
+      P_burn = P_h*(1+p_veg)*(1+p_den)*P_w*P_s
+
+      return P_burn
+
+       
 
 
       
 
 class Fuel():
    
-  def __init__(self,pveg,pden):
+  def __init__(self,pveg,pden,altitude):
       self.pveg = pveg
       self.pden = pden
+      self.altitude = altitude
       self.state = State.NOT_BURNING
     
   def setState(self,state):
      self.state = state
+
+  def getFuelAttributes(self):
+     return self.pveg,self.pden
+  
+  def getAltitude(self):
+     return self.altitude
 
 class noFuel():
   def __init__(self):
