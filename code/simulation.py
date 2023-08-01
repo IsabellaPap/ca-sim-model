@@ -6,7 +6,7 @@ Created: Wed 14 Jun, 2023
 
 # imports
 from enum import IntEnum
-from math import cos, exp, sqrt, tan
+from math import cos, exp, sqrt, tan, pi
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -73,14 +73,22 @@ class Grid():
               grid_rep[i][j] = np.random.choice(3,1,p=[0,p_nofuel,1-p_nofuel])
               if grid_rep[i][j] == 1:
                 self.grid[i][j] = noFuel()
-              else:
-                self.grid[i][j] = Fuel(np.random.choice([-0.3,0,0.4],1),np.random.choice([-0.4,0,0.3],1),np.random.choice([1,2,6,7],1))
+                noFuel.setAltitude(self.grid[i][j],self,x=i+1,y=j+1)
 
+              else:
+                self.grid[i][j] = Fuel(np.random.choice([-0.3,0,0.4],1),np.random.choice([-0.4,0,0.3],1))
+                Fuel.setAltitude(self.grid[i][j],self,x=i+1,y=j+1)
+
+      self.ShowGrid('dem')
     """Description
     Parameters
     ---------
     self: Grid
     the Grid to print
+
+    colormap: string
+    sim for simulation colours
+    dem for elevation colours
 
     iter_num: int
     iteration number, useful for printing the time step on the plot 
@@ -92,19 +100,36 @@ class Grid():
     The colormap is sliced depending on the number of unique states present on the grid at the time it is called.
 
     """
-    def ShowGrid(self,iter_num=0):
-      grid_rep = np.zeros((self.height,self.width), dtype=int)
-      unique_states = set()
-      for i in range(len(self.grid)):
-          for j in range(len(self.grid[i])):
-              grid_rep[i][j] = (self.grid[i][j].state.value)
-              unique_states.add(self.grid[i][j])
+    def ShowGrid(self,colormap,iter_num=0):
+      grid_rep_sim = np.zeros((self.height,self.width), dtype=int)
+      grid_rep_dem = np.zeros((self.height,self.width), dtype=float)
+      normalized_grid = np.zeros((self.height,self.width), dtype=float)
 
-      num_states = len(unique_states)
-      colormap = colors.ListedColormap(["grey","green","red","black"][:num_states])
+      if colormap == 'sim':
+        unique_states = set()
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[i])):
+                grid_rep_sim[i][j] = (self.grid[i][j].state.value)
+                unique_states.add(self.grid[i][j])
+        num_states = len(unique_states)
+        colormap_to_use = colors.ListedColormap(["grey","green","red","black"][:num_states])
+        plt.figure(figsize=(10,10))
+        plt.imshow(grid_rep_sim,cmap=colormap_to_use)
+      elif colormap == 'dem':
+         for i in range(len(self.grid)):
+            for j in range(len(self.grid[i])):
+                if isinstance(self.grid[i][j],noFuel):
+                  grid_rep_dem[i][j] = (noFuel.getAltitude(self.grid[i][j]))
+                else:
+                   grid_rep_dem[i][j] = (Fuel.getAltitude(self.grid[i][j]))
+         min_altitude = np.min(grid_rep_dem)
+         max_altitude = np.max(grid_rep_dem)
+         colormap_to_use = 'Greens'
+         normalized_grid = (grid_rep_dem - min_altitude) / (max_altitude - min_altitude)
 
-      plt.figure(figsize=(10,10))
-      plt.imshow(grid_rep,cmap=colormap)
+         plt.figure(figsize=(10,10))
+         plt.imshow(normalized_grid,cmap=colormap_to_use)
+      
       plt.title('Grid Visualization (Time Step = {})'.format(iter_num))
       plt.grid(False)
       plt.savefig('./output/{}.png'.format(10 + iter_num))
@@ -163,7 +188,6 @@ class Grid():
         sys.exit("You tried to burn a cell with no fuel")
       else:
         self.grid[x][y].setState(State.BURNING)
-        print("this cell {},{} is now burning. look! {}".format(x,y,grid.grid[x][y].state))
 
     
     def check_neighbours(self, center_x, center_y):
@@ -179,8 +203,7 @@ class Grid():
                    position = 0
                 else:
                    position = 1
-                p_burn = Grid.calculate_P_burn(self.grid[x][y],self.grid[x+i-1][y+j-1],9,np.random.choice([0,45,90,-45,-90,180,-180],1), position)
-                print("burning cell {},{} with probability {}".format(i,j,p_burn))
+                p_burn = Grid.calculatePburn(self,self.grid[x][y],self.grid[x+i-1][y+j-1], position)
                 if p_burn > 0:
                   self.ignite(x+i-1,y+j-1)
 
@@ -216,32 +239,34 @@ class Grid():
       # enforce rule 2: if a cell is in state 3 - BURN, it will be BURNED down in the next time step
       for cell in burning_cells:
         x,y = cell
-        print("cell {},{} has burned down".format(x,y))
         self.grid[x][y].setState(State.BURNED)
 
-      self.ShowGrid(burn_count)
+      self.ShowGrid('sim',burn_count)
 
-    def calculate_P_burn(cell_from, cell_to, V, theta, position):
+    def calculatePburn(self, cell_from, cell_to, position):
       P_h = 0.58
       p_veg, p_den = Fuel.getFuelAttributes(cell_to)
 
-      c1 = 0.045
-      c2 = 0.131
-      ft = exp(V*c2*(cos(theta)-1))
-      P_w = exp(c1*V)*ft
+      # c1 = 0.045
+      # c2 = 0.131
+      # ft = exp(V*c2*(cos(theta)-1))
+      # P_w = exp(c1*V)*ft
 
       a = 0.078
       # cell altitudes
       E1 = Fuel.getAltitude(cell_from)
       E2 = Fuel.getAltitude(cell_to)
       l = 25
-      if position == 0:
-        theta_s = 1/(tan(E1-E2/l))
-      elif position == 1:
-         theta_s = 1/(tan(E1-E2/sqrt(2*l)))
+      if E1 - E2 == 0:
+         theta_s = 0
+      else:  
+        if position == 0:
+          theta_s = pow(tan(E1-E2/l),-1)
+        elif position == 1:
+          theta_s = pow(tan(E1-E2/sqrt(2*l)),-1)
       P_s = exp(a*theta_s)
 
-      P_burn = P_h*(1+p_veg)*(1+p_den)*P_w*P_s
+      P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
 
       return P_burn
 
@@ -252,10 +277,9 @@ class Grid():
 
 class Fuel():
    
-  def __init__(self,pveg,pden,altitude):
+  def __init__(self,pveg,pden):
       self.pveg = pveg
       self.pden = pden
-      self.altitude = altitude
       self.state = State.NOT_BURNING
     
   def setState(self,state):
@@ -266,10 +290,27 @@ class Fuel():
   
   def getAltitude(self):
      return self.altitude
+  def setAltitude(self,grid,x,y):
+     center_x = grid.width / 2
+     center_y = grid.height / 2
+     distance_from_center = sqrt((x - center_x)**2 + (y - center_y)**2)
+     sigma = -10
+     self.altitude = (1/(2*pi*sigma**2))*exp(-(distance_from_center**2)/2*sigma**2)
+
 
 class noFuel():
   def __init__(self):
         self.state = State.NO_FUEL
+
+  def setAltitude(self,grid,x,y):
+     center_x = grid.width / 2
+     center_y = grid.height / 2
+     distance_from_center = sqrt((x - center_x)**2 + (y - center_y)**2)
+     sigma = -10
+     self.altitude = (1/(2*pi*sigma**2))*exp(-(distance_from_center**2)/2*sigma**2)
+
+  def getAltitude(self):
+     return self.altitude
 
 # modules
 
@@ -279,10 +320,10 @@ if __name__ == "__main__":
   height = 120
   width = 100
   grid = Grid(height,width)
-  count = 0
+  count = 1
 
-  grid.PopulateGrid(0.2)
-  grid.ignite(35,46)
+  grid.PopulateGrid(0.02)
+  grid.ignite(10,20)
   for i in range(25):
     grid.ca_simulation(count)
     count += 1
