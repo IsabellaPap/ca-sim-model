@@ -294,10 +294,9 @@ class Fuel():
      center_x = grid.width / 2
      center_y = grid.height / 2
      distance_from_center = sqrt((x - center_x)**2 + (y - center_y)**2)
-     sigma = -10
+     sigma = 0.000006
      self.altitude = (1/(2*pi*sigma**2))*exp(-(distance_from_center**2)/2*sigma**2)
-
-
+     
 class noFuel():
   def __init__(self):
         self.state = State.NO_FUEL
@@ -306,7 +305,7 @@ class noFuel():
      center_x = grid.width / 2
      center_y = grid.height / 2
      distance_from_center = sqrt((x - center_x)**2 + (y - center_y)**2)
-     sigma = -10
+     sigma = 0.000006
      self.altitude = (1/(2*pi*sigma**2))*exp(-(distance_from_center**2)/2*sigma**2)
 
   def getAltitude(self):
@@ -318,12 +317,12 @@ class noFuel():
 
 if __name__ == "__main__":
   height = 120
-  width = 100
+  width = 120
   grid = Grid(height,width)
   count = 1
 
   grid.PopulateGrid(0.02)
-  grid.ignite(10,20)
+  grid.ignite(1,3)
   for i in range(25):
     grid.ca_simulation(count)
     count += 1
