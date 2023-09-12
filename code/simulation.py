@@ -78,8 +78,8 @@ class Grid():
                 state = State.NO_FUEL
 
               else:
-                pveg = np.random.choice([1,2,3],1)
-                pden = np.random.choice([1,2,3],1) 
+                pveg = 0
+                pden = 0
                 state = State.NOT_BURNING
 
               # initialise Cell
@@ -88,6 +88,7 @@ class Grid():
               Cell.setAltitude(self.grid[i][j],self,x=i,y=j)
 
       self.ShowGrid('dem')
+      
     """Description
     Parameters
     ---------
@@ -104,9 +105,7 @@ class Grid():
 
     Functionality
     ---------
-    it prints the grid using matplotlib's pyplot and colors libraries. 
-    The colormap is sliced depending on the number of unique states present on the grid at the time it is called.
-
+    it prints the grid and the dem using matplotlib's pyplot and colors libraries. 
     """
     def ShowGrid(self,colormap,iter_num=0):
       grid_rep_sim = np.zeros((self.height,self.width), dtype=int)
@@ -125,11 +124,11 @@ class Grid():
       plt.imshow(normalized_grid,cmap='Greens')
 
       # SIM Colormap
-      unique_states = set()
+      # unique_states = set()
       for i in range(len(self.grid)):
           for j in range(len(self.grid[i])):
               grid_rep_sim[i][j] = (self.grid[i][j].state.value)
-              unique_states.add(self.grid[i][j])
+              # unique_states.add(self.grid[i][j])
       transparent_green = (0, 1, 0, 0)
       colormap = colors.ListedColormap([transparent_green,"red","black"])
       plt.imshow(grid_rep_sim,cmap=colormap,alpha=0.9)
@@ -197,7 +196,7 @@ class Grid():
         self.grid[x][y].setState(State.BURNING)
 
     
-    def check_neighbours(self, center_x, center_y):
+    def check_neighbours(self, center_x, center_y, time_step):
       x = center_x
       y = center_y
 
@@ -211,8 +210,12 @@ class Grid():
                 else:
                    position = 1
                 p_burn = Grid.calculatePburn(self,self.grid[x][y],self.grid[x+i-1][y+j-1], position)
-                if np.random.rand() < p_burn:
+                print("burning cell: {},{} with p_burn = {}".format(x,y,p_burn))
+                
+                sensitivity = 0.5002
+                if p_burn<=sensitivity:
                     self.ignite(x+i-1,y+j-1)
+                    
 
                  
         """Description
@@ -228,7 +231,7 @@ class Grid():
     """
         
     def ca_simulation(self, count):
-      burn_count = count
+      time_step = count
       burning_cells = []
       # check neighbours
       cells_to_check = []
@@ -240,7 +243,7 @@ class Grid():
       for cell in cells_to_check:
         x,y = cell
         if self.grid[x][y].state == State.BURNING:
-          self.check_neighbours(x,y)
+          self.check_neighbours(x,y,time_step)
           burning_cells.append((x,y))
       
       # enforce rule 2: if a cell is in state 3 - BURN, it will be BURNED down in the next time step
@@ -252,10 +255,10 @@ class Grid():
         #   print(burn_count)
         self.grid[x][y].setState(State.BURNED)
 
-      self.ShowGrid('sim',burn_count)
+      self.ShowGrid('sim',time_step)
 
     def calculatePburn(self, cell_from, cell_to, position):
-      P_h = 0.58
+      P_h = 1
       p_veg, p_den = Cell.getFuelAttributes(cell_to)
 
       # c1 = 0.045
@@ -263,22 +266,22 @@ class Grid():
       # ft = exp(V*c2*(cos(theta)-1))
       # P_w = exp(c1*V)*ft
 
-      a = 0.9
+      a = 0.0078
       # cell altitudes
       E1 = Cell.getAltitude(cell_from)
       E2 = Cell.getAltitude(cell_to)
-      l = 25
-      if E1 - E2 == 0:
-         theta_s = 0
-      else:  
-        if position == 0:
-          theta_s = atan((E1 - E2) / l)
-        elif position == 1:
-          theta_s = atan((E1 - E2) / (l * sqrt(2)))
-      P_s = exp(a*theta_s)
+      height_diff = E1-E2
+      print(height_diff)
+      l = 25.0
+      if position == 0:
+        theta_s = atan(height_diff / l)
+      elif position == 1:
+        theta_s = atan(height_diff / (l * sqrt(2)))
 
-      P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
+      P_s = exp(a*theta_s)/2
+      #P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
 
+      P_burn = P_s
 
       return P_burn
 
@@ -336,12 +339,11 @@ class Cell():
     mu_y = grid.height / 2
     sigma_x = grid.width / 6
     sigma_y = grid.height / 6
-    A=0
+    A=1000
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
-
-    if x==mu_x and y ==mu_y:
-      print(self.altitude)
+    if x==mu_x and y==mu_y:
+      print("{},{} = {}".format(x,y,self.altitude))    
 
 
 
@@ -358,6 +360,6 @@ if __name__ == "__main__":
 
   grid.PopulateGrid(0)
   grid.ignite(1,1)
-  for i in range(50):
+  for i in range(100):
     grid.ca_simulation(count)
     count += 1
