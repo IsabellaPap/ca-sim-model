@@ -158,7 +158,7 @@ class Grid():
 
     Returns
     ---------
-    the "window" numpy array with 0s and 1s where only if window[i,j] == 1 the algorithm will run
+    the "window" numpy array with 0s and 1s where 1 indicates a cell to be checked by the ignition algorithm
 
     """
     def window(self, center_x, center_y):
@@ -205,15 +205,15 @@ class Grid():
         for j in range(len(window[i])):
             if window[i][j] == 1:
               if self.grid[x+i-1][y+j-1].state == State.NOT_BURNING:
-                if x == x+i-1:
+                if x == x+i-1 or y == y+j-1:
                    position = 0
                 else:
                    position = 1
                 p_burn = Grid.calculatePburn(self,self.grid[x][y],self.grid[x+i-1][y+j-1], position)
                 print("burning cell: {},{} with p_burn = {}".format(x,y,p_burn))
                 
-                sensitivity = 0.5002
-                if p_burn<=sensitivity:
+                sensitivity = np.random.choice(2,1,p=[p_burn,1-p_burn])
+                if sensitivity == 0:
                     self.ignite(x+i-1,y+j-1)
                     
 
@@ -266,11 +266,11 @@ class Grid():
       # ft = exp(V*c2*(cos(theta)-1))
       # P_w = exp(c1*V)*ft
 
-      a = 0.0078
+      a = 0.1
       # cell altitudes
       E1 = Cell.getAltitude(cell_from)
       E2 = Cell.getAltitude(cell_to)
-      height_diff = E1-E2
+      height_diff = E2-E1
       print(height_diff)
       l = 25.0
       if position == 0:
@@ -278,7 +278,12 @@ class Grid():
       elif position == 1:
         theta_s = atan(height_diff / (l * sqrt(2)))
 
+      theta_s = theta_s * 100
+      print(theta_s)
+
       P_s = exp(a*theta_s)/2
+      # Clip the values to [0, 1]
+      P_s = 1 / (1 + exp(-a * theta_s))
       #P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
 
       P_burn = P_s
@@ -342,8 +347,7 @@ class Cell():
     A=1000
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
-    if x==mu_x and y==mu_y:
-      print("{},{} = {}".format(x,y,self.altitude))    
+
 
 
 
@@ -359,7 +363,7 @@ if __name__ == "__main__":
   count = 1
 
   grid.PopulateGrid(0)
-  grid.ignite(1,1)
-  for i in range(100):
+  grid.ignite(119,119)
+  for i in range(60):
     grid.ca_simulation(count)
     count += 1
