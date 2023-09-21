@@ -196,7 +196,7 @@ class Grid():
         self.grid[x][y].setState(State.BURNING)
 
     
-    def check_neighbours(self, center_x, center_y, time_step):
+    def checkNeighbours(self, center_x, center_y, time_step):
       x = center_x
       y = center_y
 
@@ -212,17 +212,19 @@ class Grid():
                 p_burn = Grid.calculatePburn(self,self.grid[x][y],self.grid[x+i-1][y+j-1], position)
                 print("burning cell: {},{} with p_burn = {}".format(x,y,p_burn))
                 
-                sensitivity = np.random.choice(2,1,p=[p_burn,1-p_burn])
-                if sensitivity == 0:
+                random = np.random.choice(2,1,p=[p_burn,1-p_burn])
+                if random == 0:
                     self.ignite(x+i-1,y+j-1)
                     
 
                  
-        """Description
+    """Description
     Parameters
     ---------
     self: Grid
     the Grid on which to perform the simulation
+
+    count: the step counter of the iteration
 
     Functionality
     ---------
@@ -230,7 +232,7 @@ class Grid():
     based on the Cellular Automata Rules.
     """
         
-    def ca_simulation(self, count):
+    def caSimulation(self, count):
       time_step = count
       burning_cells = []
       # check neighbours
@@ -243,16 +245,12 @@ class Grid():
       for cell in cells_to_check:
         x,y = cell
         if self.grid[x][y].state == State.BURNING:
-          self.check_neighbours(x,y,time_step)
+          self.checkNeighbours(x,y,time_step)
           burning_cells.append((x,y))
       
       # enforce rule 2: if a cell is in state 3 - BURN, it will be BURNED down in the next time step
       for cell in burning_cells:
         x,y = cell
-        # if x==self.width/2 and y ==self.height/2:
-        #   print(burn_count)
-        # if x==self.width and y==self.height:
-        #   print(burn_count)
         self.grid[x][y].setState(State.BURNED)
 
       self.ShowGrid('sim',time_step)
@@ -279,7 +277,6 @@ class Grid():
         theta_s = atan(height_diff / (l * sqrt(2)))
 
       theta_s = theta_s * 100
-      print(theta_s)
 
       P_s = exp(a*theta_s)/2
       # Clip the values to [0, 1]
@@ -363,7 +360,8 @@ if __name__ == "__main__":
   count = 1
 
   grid.PopulateGrid(0)
-  grid.ignite(119,119)
-  for i in range(60):
-    grid.ca_simulation(count)
+  grid.ignite(1,1)
+  steps = 60
+  for i in range(steps):
+    grid.caSimulation(count)
     count += 1
