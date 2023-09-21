@@ -276,7 +276,7 @@ class Grid():
       elif position == 1:
         theta_s = atan(height_diff / (l * sqrt(2)))
 
-      theta_s = theta_s * 100
+      theta_s = theta_s * 180/pi
 
       P_s = exp(a*theta_s)/2
       # Clip the values to [0, 1]
