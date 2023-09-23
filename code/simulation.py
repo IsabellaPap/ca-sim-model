@@ -17,6 +17,8 @@ import os
 output_path = os.path.abspath('ca-sim-model')
 # classes
 
+parameters = {}
+
 # discrete states of cells
 class State(IntEnum):
     NO_FUEL = 1
@@ -265,12 +267,16 @@ class Grid():
       # P_w = exp(c1*V)*ft
 
       a = 0.1
+      parameters["a"] = a
+
       # cell altitudes
       E1 = Cell.getAltitude(cell_from)
       E2 = Cell.getAltitude(cell_to)
       height_diff = E2-E1
-      print(height_diff)
+
       l = 25.0
+      parameters["l"] = l
+
       if position == 0:
         theta_s = atan(height_diff / l)
       elif position == 1:
@@ -339,13 +345,20 @@ class Cell():
   def setAltitude(self, grid, x, y):
     mu_x = grid.width / 2
     mu_y = grid.height / 2
-    sigma_x = grid.width / 6
-    sigma_y = grid.height / 6
+    sigma_x = grid.width / 4
+    sigma_y = grid.height / 4
+    parameters["s"] = sigma_x
     A=1000
+    parameters["A"] = A
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
 
-
+def print_parameters_table():
+    # Print the parameters as a table
+    print("Parameters Table")
+    print("================")
+    for key, value in parameters.items():
+        print(f"{key}: {value}")
 
 
 
@@ -360,8 +373,9 @@ if __name__ == "__main__":
   count = 1
 
   grid.PopulateGrid(0)
-  grid.ignite(1,1)
+  grid.ignite(60,60)
   steps = 60
   for i in range(steps):
     grid.caSimulation(count)
     count += 1
+  print_parameters_table()
