@@ -88,8 +88,9 @@ class Grid():
               self.grid[i][j] = Cell(pveg,pden,state)
 
               Cell.setAltitude(self.grid[i][j],self,x=i,y=j)
+              Cell.setMoistureContent(self.grid[i][j],self,x=i,y=j)
 
-      self.ShowGrid('dem')
+      self.ShowGrid()
       
     """Description
     Parameters
@@ -109,7 +110,7 @@ class Grid():
     ---------
     it prints the grid and the dem using matplotlib's pyplot and colors libraries. 
     """
-    def ShowGrid(self,colormap,iter_num=0):
+    def ShowGrid(self,iter_num=0):
       grid_rep_sim = np.zeros((self.height,self.width), dtype=int)
       grid_rep_dem = np.zeros((self.height,self.width), dtype=float)
       normalized_grid = np.zeros((self.height,self.width), dtype=float)
@@ -119,11 +120,8 @@ class Grid():
       #DEM Colormap
       for i in range(len(self.grid)):
         for j in range(len(self.grid[i])):
-          grid_rep_dem[i][j] = (Cell.getAltitude(self.grid[i][j]))
-      min_altitude = np.min(grid_rep_dem)
-      max_altitude = np.max(grid_rep_dem)
-      normalized_grid = (grid_rep_dem - min_altitude) / (max_altitude - min_altitude)
-      plt.imshow(normalized_grid,cmap='Greens')
+          grid_rep_dem[i][j] = (Cell.getMoistureContent(self.grid[i][j]))
+      plt.imshow(grid_rep_dem,cmap='Greens')
 
       # SIM Colormap
       # unique_states = set()
@@ -255,7 +253,7 @@ class Grid():
         x,y = cell
         self.grid[x][y].setState(State.BURNED)
 
-      self.ShowGrid('sim',time_step)
+      self.ShowGrid(time_step)
 
     def calculatePburn(self, cell_from, cell_to, position):
       P_h = 1
@@ -283,13 +281,16 @@ class Grid():
         theta_s = atan(height_diff / (l * sqrt(2)))
 
       theta_s = theta_s * 180/pi
-
-      P_s = exp(a*theta_s)/2
+      alpha = 3.258
+      beta = 0.111
+      C_m = Cell.getMoistureContent(cell_to)
+      P_m = alpha * exp(-beta*C_m)
+      print(P_m)
       # Clip the values to [0, 1]
-      P_s = 1 / (1 + exp(-a * theta_s))
+      P_m = 1 / (1 + exp(-P_m))
       #P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
 
-      P_burn = P_s
+      P_burn = P_m
 
       return P_burn
 
@@ -340,7 +341,6 @@ class Cell():
   
   def getAltitude(self):
      return self.altitude
- 
   
   def setAltitude(self, grid, x, y):
     mu_x = grid.width / 2
@@ -352,7 +352,17 @@ class Cell():
     parameters["A"] = A
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
-
+  
+  def setMoistureContent(self, grid, x, y):
+    if y > grid.width/2:
+      C_m = np.random.uniform(10,30)
+    else:
+      C_m = np.random.uniform(60,100)
+    self.C_m = C_m
+ 
+  def getMoistureContent(self):
+     return self.C_m
+  
 def print_parameters_table():
     # Print the parameters as a table
     print("Parameters Table")
