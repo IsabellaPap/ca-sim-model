@@ -348,7 +348,7 @@ class Cell():
     sigma_x = grid.width / 4
     sigma_y = grid.height / 4
     parameters["s"] = sigma_x
-    A=1000
+    A=0
     parameters["A"] = A
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
@@ -373,7 +373,7 @@ if __name__ == "__main__":
   count = 1
 
   grid.PopulateGrid(0)
-  grid.ignite(60,60)
+  grid.ignite(1,1)
   steps = 60
   for i in range(steps):
     grid.caSimulation(count)
