@@ -1,10 +1,20 @@
-from math import atan, exp, pi, sqrt
+from enum import Enum
+from math import atan, exp, pi, sqrt, cos
 from .cell import Cell
-from .grid import Grid, State
+from .grid import State
 import sys
 import numpy as np
 
-
+class WindDirection(Enum):
+    E = (1,0)
+    NE = (sqrt(2)/2,sqrt(2)/2)
+    N = (0,1)
+    NW = (-sqrt(2)/2,sqrt(2)/2)
+    W = (-1,0)
+    SW = (-sqrt(2)/2,-sqrt(2)/2)
+    S = (0,-1)
+    SE = (sqrt(2)/2,-sqrt(2)/2)
+    
 class Simulation():
 
   def __init__(self,grid,mode,ignition_point):
@@ -67,15 +77,21 @@ class Simulation():
     else:
       self.grid.grid[x][y].setState(State.BURNING)
 
-  def calculatePburn(self,cell_from, cell_to, position):
-    P_h = 1
-    p_veg, p_den = Cell.getFuelAttributes(cell_to)
+  # Calculation of different P function
 
-    # c1 = 0.045
-    # c2 = 0.131
-    # ft = exp(V*c2*(cos(theta)-1))
-    # P_w = exp(c1*V)*ft
+  # P moisture
+  def calculatePm(self,cell_to):
+    alpha = 3.258
+    beta = 0.111
+    C_m = Cell.getMoistureContent(cell_to)
+    P_m = alpha * exp(-beta*C_m)
+    # Clip the values to [0, 1]
+    P_m = 1 / (1 + exp(-P_m))
 
+    return P_m
+  
+  # P slope (terrain)
+  def calculatePs(self,cell_from, cell_to, position):
     a = 0.1
 
     # cell altitudes
@@ -91,18 +107,52 @@ class Simulation():
       theta_s = atan(height_diff / (l * sqrt(2)))
 
     theta_s = theta_s * 180/pi
-    alpha = 3.258
-    beta = 0.111
-    C_m = Cell.getMoistureContent(cell_to)
-    P_m = alpha * exp(-beta*C_m)
+
+    P_s = exp(a*theta_s)/2
+
     # Clip the values to [0, 1]
-    P_m = 1 / (1 + exp(-P_m))
-    #P_burn = P_h*(1+p_veg)*(1+p_den)*P_s
-
-    P_burn = P_m
-
-    return P_burn
+    P_s = 1 / (1 + exp(-a * theta_s))
+    
+    return P_s
   
+  # P wind
+  def calcualtePw(self, V, theta):
+    c1 = 0.045
+    c2 = 0.131
+    ft = exp(V*c2*(cos(theta)-1))
+    P_w = exp(c1*V)*ft
+  
+    if P_w>1:
+      P_w = 1
+    
+    return P_w
+
+  # Extra calculations for the parameters
+  def getTheta(dir_w,cell_window_position):
+    match cell_window_position:
+      case (1,2):
+          dir_p = WindDirection.E.value
+      case (0,2):
+          dir_p = WindDirection.NE.value
+      case (0,1):
+          dir_p = WindDirection.N.value
+      case (0,0):
+          dir_p = WindDirection.NW.value
+      case (1,0):
+          dir_p = WindDirection.W.value
+      case (2,0):
+          dir_p = WindDirection.SW.value
+      case (2,1):
+          dir_p = WindDirection.S.value
+      case (2,2):
+          dir_p = WindDirection.SE.value
+    # note case (1,1) will never happen because window[1][1] is always 0 as shown in window() method. 
+
+    theta = np.arccos(np.clip(np.dot(dir_w, dir_p) / (np.linalg.norm(dir_w) * np.linalg.norm(dir_p)), -1.0, 1.0))
+    theta = theta * (180 / pi)
+
+    return theta
+
   def checkNeighbours(self, center_x, center_y):
     x = center_x
     y = center_y
@@ -111,14 +161,28 @@ class Simulation():
     for i in range(len(window)):
       for j in range(len(window[i])):
           if window[i][j] == 1:
-            if self.grid.grid[x+i-1][y+j-1].state == State.NOT_BURNING:
+            cell_to = self.grid.grid[x+i-1][y+j-1]
+            current_cell = self.grid.grid[x][y]
+
+            if cell_to.state == State.NOT_BURNING:
+              
               # if i-1 = 0 then the cells are on the same x axis, if y-1 = 0 they are on the same y axis (so adjacent)
               if x == x+i-1 or y == y+j-1:
-                  position = 0
+                  position_flag = 'ADJ'
               else:
                   # if not they are diagonal
-                  position = 1
-              p_burn = self.calculatePburn(self.grid.grid[x][y],self.grid.grid[x+i-1][y+j-1], position)
+                  position_flag = 'DIAG'
+
+              if self.mode == 'humidity':
+                 p_burn = self.calculatePm(cell_to)
+              elif self.mode == 'terrain':
+                p_burn = self.calculatePs(current_cell,cell_to, position_flag)
+              elif self.mode == 'wind':
+                dir_w = WindDirection.SE.value
+                V = 3
+                theta = self.getTheta(dir_w,(i,j))
+                p_burn = self.calcualtePw(V,theta)
+
               print("burning cell: {},{} with p_burn = {}".format(x,y,p_burn))
               
               random = np.random.choice(2,1,p=[p_burn,1-p_burn])
