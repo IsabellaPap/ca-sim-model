@@ -1,4 +1,5 @@
 {
+  "random_seed": 40,
   "grid": {
     "height": 120,
     "width": 120,

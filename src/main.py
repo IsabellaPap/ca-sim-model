@@ -6,9 +6,12 @@ Created: Wed 14 Jun, 2023
 from .grid import Grid
 from .simulation import Simulation
 from .utils.configuration import load_config
+import numpy
 
 config = load_config('input/config.json')
 
+seed_value = config['random_seed']
+numpy.random.seed(seed=seed_value)
 grid_config = config['grid']
 
 grid = Grid(grid_config['height'],grid_config['width'])
