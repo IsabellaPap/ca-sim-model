@@ -51,7 +51,7 @@ class Grid():
   it populates the grid with cells that are either able or unable to be burned (class Nofuel() || Fuel() )
 
   """
-  def PopulateGrid(self,p_nofuel):
+  def PopulateGrid(self,p_nofuel,mode):
     # probability to have a cell with no fuel
     self.p_nofuel = p_nofuel
     grid_rep = np.zeros((self.height,self.width), dtype=int)
@@ -73,10 +73,12 @@ class Grid():
             # initialise Cell
             self.grid[i][j] = Cell(pveg,pden,state)
 
-            Cell.setAltitude(self.grid[i][j],self,x=i,y=j)
-            Cell.setMoistureContent(self.grid[i][j],self,x=i,y=j)
+            if mode == 'terrain':
+              Cell.setAltitude(self.grid[i][j],self,x=i,y=j)
+            elif mode == 'humidity':
+              Cell.setMoistureContent(self.grid[i][j],self,x=i,y=j)
 
-    self.ShowGrid()
+    self.ShowGrid(mode)
     
   """Description
   Parameters
@@ -97,7 +99,7 @@ class Grid():
   it prints the grid and the dem using matplotlib's pyplot and colors libraries. 
   """
 
-  def ShowGrid(self,iter_num=0):
+  def ShowGrid(self,mode,iter_num=0):
     grid_rep_sim = np.zeros((self.height,self.width), dtype=int)
     grid_rep_dem = np.zeros((self.height,self.width), dtype=float)
     normalized_grid = np.zeros((self.height,self.width), dtype=float)
@@ -107,15 +109,16 @@ class Grid():
     #DEM Colormap
     for i in range(len(self.grid)):
       for j in range(len(self.grid[i])):
-        grid_rep_dem[i][j] = (Cell.getMoistureContent(self.grid[i][j]))
+        if mode == 'humidity':
+          grid_rep_dem[i][j] = (Cell.getMoistureContent(self.grid[i][j]))
+        elif mode == 'terrain':
+          grid_rep_dem[i][j] = (Cell.getAltitude(self.grid[i][j]))
     plt.imshow(grid_rep_dem,cmap='Greens')
 
     # SIM Colormap
-    # unique_states = set()
     for i in range(len(self.grid)):
         for j in range(len(self.grid[i])):
             grid_rep_sim[i][j] = (self.grid[i][j].state.value)
-            # unique_states.add(self.grid[i][j])
     transparent_green = (0, 1, 0, 0)
     colormap = colors.ListedColormap([transparent_green,"red","black"])
     plt.imshow(grid_rep_sim,cmap=colormap,alpha=0.9)

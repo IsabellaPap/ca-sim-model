@@ -17,10 +17,11 @@ class WindDirection(Enum):
     
 class Simulation():
 
-  def __init__(self,grid,mode,ignition_point):
+  def __init__(self,grid,mode,ignition_point,config):
         self.mode = mode
         self.grid = grid
         self.ignite(ignition_point)
+        self.config = config
 
   """Description
   Parameters
@@ -81,8 +82,8 @@ class Simulation():
 
   # P moisture
   def calculatePm(self,cell_to):
-    alpha = 3.258
-    beta = 0.111
+    alpha = self.config['alpha']
+    beta = self.config['beta']
     C_m = Cell.getMoistureContent(cell_to)
     P_m = alpha * exp(-beta*C_m)
     # Clip the values to [0, 1]
@@ -92,14 +93,14 @@ class Simulation():
   
   # P slope (terrain)
   def calculatePs(self,cell_from, cell_to, position):
-    a = 0.1
+    a = self.config['a']
 
     # cell altitudes
     E1 = Cell.getAltitude(cell_from)
     E2 = Cell.getAltitude(cell_to)
     height_diff = E2-E1
 
-    l = 25.0
+    l = self.config['l']
 
     if position == 'ADJ':
       theta_s = atan(height_diff / l)
@@ -117,8 +118,8 @@ class Simulation():
   
   # P wind
   def calcualtePw(self, V, theta):
-    c1 = 0.045
-    c2 = 0.131
+    c1 = self.config['c1']
+    c2 = self.config['c2']
     ft = exp(V*c2*(cos(theta)-1))
     P_w = exp(c1*V)*ft
   
@@ -178,9 +179,9 @@ class Simulation():
               elif self.mode == 'terrain':
                 p_burn = self.calculatePs(current_cell,cell_to, position_flag)
               elif self.mode == 'wind':
-                dir_w = WindDirection.SE.value
+                dir_w = getattr(WindDirection, self.config['direction'])
                 V = 3
-                theta = self.getTheta(dir_w,(i,j))
+                theta = self.getTheta(dir_w.value,(i,j))
                 p_burn = self.calcualtePw(V,theta)
 
               print("burning cell: {},{} with p_burn = {}".format(x,y,p_burn))
@@ -214,6 +215,6 @@ class Simulation():
         self.grid.grid[x][y].setState(State.BURNED)
         burned_cells.append(cell)
 
-      self.grid.ShowGrid(time_step)
+      self.grid.ShowGrid(self.mode,time_step)
 
   
