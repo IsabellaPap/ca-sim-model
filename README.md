@@ -10,8 +10,8 @@ After you fork it while in the **ca-sim-model** project folder run
 `pip install -r requirements.txt`
 
 ## Running
-In the terminal while in the **ca-sim-model/code** run
-`python simulation.py`
+In the terminal while in the **ca-sim-model** folder run:
+`python -m src.main`
 
 Note: Make sure your global python version is 3.11. You can switch easily between python versions with a version manager like pyenv.
 
