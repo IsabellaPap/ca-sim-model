@@ -101,9 +101,9 @@ class Simulation():
 
     l = 25.0
 
-    if position == 0:
+    if position == 'ADJ':
       theta_s = atan(height_diff / l)
-    elif position == 1:
+    elif position == 'DIAG':
       theta_s = atan(height_diff / (l * sqrt(2)))
 
     theta_s = theta_s * 180/pi
@@ -128,7 +128,7 @@ class Simulation():
     return P_w
 
   # Extra calculations for the parameters
-  def getTheta(dir_w,cell_window_position):
+  def getTheta(self,dir_w,cell_window_position):
     match cell_window_position:
       case (1,2):
           dir_p = WindDirection.E.value
