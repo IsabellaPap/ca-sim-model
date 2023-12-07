@@ -5,15 +5,19 @@ Created: Wed 14 Jun, 2023
 """
 from .grid import Grid
 from .simulation import Simulation
+from .utils.configuration import load_config
 
-height = 120
-width = 120
-grid = Grid(height,width)
-count = 1
+config = load_config('input/config.json')
 
-grid.PopulateGrid(0)
-mode = 'humidity'
-ignition_point = (1,1)
-sim = Simulation(grid, mode, ignition_point)
-steps = 60
+grid_config = config['grid']
+
+grid = Grid(grid_config['height'],grid_config['width'])
+
+sim_config = config['simulation']
+
+mode = sim_config['mode']
+grid.PopulateGrid(grid_config['p_no_fuel'], mode)
+ignition_point = (sim_config['ignition_point']['x'],sim_config['ignition_point']['y'])
+sim = Simulation(grid, mode, ignition_point,config[mode])
+steps = sim_config['steps']
 sim.startSimulation(steps)

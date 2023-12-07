@@ -1,5 +1,8 @@
 from math import exp
 import numpy as np
+from .utils.configuration import load_config
+
+config = load_config('input/config.json')
 
 class Cell():
   """Description
@@ -47,9 +50,9 @@ class Cell():
   def setAltitude(self, grid, x, y):
     mu_x = grid.width / 2
     mu_y = grid.height / 2
-    sigma_x = grid.width / 4
-    sigma_y = grid.height / 4
-    A=0
+    sigma_x = config['terrain']['sigma_x']
+    sigma_y = config['terrain']['sigma_y']
+    A = config['terrain']['A']
     altitude = A * exp(-(((x - mu_x) ** 2) / (2 * sigma_x ** 2) + ((y - mu_y) ** 2) / (2 * sigma_y ** 2)))
     self.altitude = altitude
   

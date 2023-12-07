@@ -1,0 +1,31 @@
+{
+  "grid": {
+    "height": 120,
+    "width": 120,
+    "p_no_fuel": 0
+  },
+  "simulation": {
+    "mode": "terrain",
+    "ignition_point": {
+      "x": 1,
+      "y": 1
+    },
+    "steps": 60
+  },
+  "humidity": {
+    "alpha": 3.258,
+    "beta": 0.111
+  },
+  "terrain": {
+    "a": 0.1,
+    "l": 25.0,
+    "sigma_x": 30,
+    "sigma_y": 30,
+    "A": 10
+  },
+  "wind": {
+    "c1": 0.045,
+    "c2": 0.131,
+    "direction":"SE"
+  }
+}
