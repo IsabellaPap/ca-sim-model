@@ -4,6 +4,7 @@ from .cell import Cell
 from .grid import State
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 class WindDirection(Enum):
     E = (1,0)
@@ -174,7 +175,7 @@ class Simulation():
                   # if not they are diagonal
                   position_flag = 'DIAG'
 
-              if self.mode == 'humidity':
+              if self.mode == 'moisture':
                  p_burn = self.calculatePm(cell_to)
               elif self.mode == 'terrain':
                 p_burn = self.calculatePs(current_cell,cell_to, position_flag)
@@ -192,10 +193,12 @@ class Simulation():
                   
       
   def startSimulation(self, steps):
+    burned_cells_per_step = []
     for i in range(steps):
       time_step = i
       burning_cells = []
       burned_cells = []
+
       # check neighbours
       cells_to_check = []
       for x in range(len(self.grid.grid)):
@@ -214,7 +217,17 @@ class Simulation():
         x,y = cell
         self.grid.grid[x][y].setState(State.BURNED)
         burned_cells.append(cell)
+        burned_cells_per_step.append(len(burned_cells))
 
       self.grid.ShowGrid(self.mode,time_step)
+    self.plot_burned_cells_over_time(burned_cells_per_step)
 
-  
+  def plot_burned_cells_over_time(self, data):
+          
+          time_steps = list(range(len(data)))
+
+          plt.plot(time_steps, data)
+          plt.title('Number of Burned Cells Over Time')
+          plt.xlabel('Time Step')
+          plt.ylabel('Number of Burned Cells')
+          plt.savefig('./output/Burned_cells.png')

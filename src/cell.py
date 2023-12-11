@@ -57,10 +57,7 @@ class Cell():
     self.altitude = altitude
   
   def setMoistureContent(self, grid, x, y):
-    if y > grid.width/2:
-      C_m = np.random.uniform(10,30)
-    else:
-      C_m = np.random.uniform(60,100)
+    C_m = np.random.uniform(config['moisture']['low'],config['moisture']['high'])
     self.C_m = C_m
  
   def getMoistureContent(self):

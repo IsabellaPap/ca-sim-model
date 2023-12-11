@@ -75,7 +75,7 @@ class Grid():
 
             if mode == 'terrain':
               Cell.setAltitude(self.grid[i][j],self,x=i,y=j)
-            elif mode == 'humidity':
+            elif mode == 'moisture':
               Cell.setMoistureContent(self.grid[i][j],self,x=i,y=j)
 
     self.ShowGrid(mode)
@@ -102,14 +102,13 @@ class Grid():
   def ShowGrid(self,mode,iter_num=0):
     grid_rep_sim = np.zeros((self.height,self.width), dtype=int)
     grid_rep_dem = np.zeros((self.height,self.width), dtype=float)
-    normalized_grid = np.zeros((self.height,self.width), dtype=float)
 
     plt.figure(figsize=(10,10))
 
     #DEM Colormap
     for i in range(len(self.grid)):
       for j in range(len(self.grid[i])):
-        if mode == 'humidity':
+        if mode == 'moisture':
           grid_rep_dem[i][j] = (Cell.getMoistureContent(self.grid[i][j]))
         elif mode == 'terrain':
           grid_rep_dem[i][j] = (Cell.getAltitude(self.grid[i][j]))
@@ -127,5 +126,5 @@ class Grid():
     
     plt.title('Grid Visualization (Time Step = {})'.format(iter_num))
     plt.grid(False)
-    plt.savefig('./output/{}.png'.format(10 + iter_num))
+    plt.savefig('./output/images/{}.png'.format(10 + iter_num))
     plt.close()
