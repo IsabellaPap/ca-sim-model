@@ -18,11 +18,12 @@ class WindDirection(Enum):
     
 class Simulation():
 
-  def __init__(self,grid,mode,ignition_point,config):
+  def __init__(self,grid,mode,ignition_point,config, steps):
         self.mode = mode
         self.grid = grid
         self.ignite(ignition_point)
         self.config = config
+        self.steps = steps
 
   """Description
   Parameters
@@ -192,9 +193,9 @@ class Simulation():
                   self.ignite((x+i-1,y+j-1))
                   
       
-  def startSimulation(self, steps):
+  def startSimulation(self):
     burned_cells_per_step = []
-    for i in range(steps):
+    for i in range(self.steps):
       time_step = i
       burning_cells = []
       burned_cells = []
@@ -212,19 +213,20 @@ class Simulation():
           self.checkNeighbours(x,y)
           burning_cells.append((x,y))
       
-      # enforce rule 2: if a cell is in state 3 - BURN, it will be BURNED down in the next time step
+      # enforce rule 2: if a cell is in state 3 - BURNING, it will be BURNED down in the next time step
       for cell in burning_cells:
         x,y = cell
         self.grid.grid[x][y].setState(State.BURNED)
-        burned_cells.append(cell)
-        burned_cells_per_step.append(len(burned_cells))
+        burned_cells.append((x,y))
+        
+      burned_cells_per_step.append(len(burned_cells))
 
       self.grid.ShowGrid(self.mode,time_step)
-    self.plot_burned_cells_over_time(burned_cells_per_step)
+    self.plot_burned_cells_over_time(burned_cells_per_step,self.steps)
 
-  def plot_burned_cells_over_time(self, data):
+  def plot_burned_cells_over_time(self, data, time_steps):
           
-          time_steps = list(range(len(data)))
+          time_steps = list(range(time_steps))
 
           plt.plot(time_steps, data)
           plt.title('Number of Burned Cells Over Time')

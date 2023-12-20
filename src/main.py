@@ -21,6 +21,7 @@ sim_config = config['simulation']
 mode = sim_config['mode']
 grid.PopulateGrid(grid_config['p_no_fuel'], mode)
 ignition_point = (sim_config['ignition_point']['x'],sim_config['ignition_point']['y'])
-sim = Simulation(grid, mode, ignition_point,config[mode])
 steps = sim_config['steps']
-sim.startSimulation(steps)
+sim = Simulation(grid, mode, ignition_point,config[mode],steps)
+
+sim.startSimulation()

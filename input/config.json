@@ -16,8 +16,8 @@
   "moisture": {
     "alpha": 3.258,
     "beta": 0.111,
-    "low": 10,
-    "high": 30
+    "low": 70,
+    "high": 90
   },
   "terrain": {
     "a": 0.1,
